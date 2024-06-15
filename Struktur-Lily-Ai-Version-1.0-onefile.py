@@ -1,25 +1,24 @@
-#Bibliothek/en für die Eingabe (STT, ...)
+# Bibliothek/en für die Eingabe (STT, ...)
 import speech_recognition as sr
 import time
 
-#Bibliothek/en für das Vergleichen von Antworten (ob etwas [nicht] zutrifft)
+# Bibliothek/en für das Vergleichen von Antworten (ob etwas [nicht] zutrifft)
 from difflib import SequenceMatcher
 
-#Bibliothek/en für das Abrufen/Speichern/Laden von Datenbanken
+# Bibliothek/en für das Abrufen/Speichern/Laden von Datenbanken
 import os
 import json
 
-#Bibliothek/en für das Verarbeiten der Frage
+# Bibliothek/en für das Verarbeiten der Frage
 from freeGPT import AsyncClient
 import asyncio
 
-#Bibliothek/en für das Ausgeben der Antwort (Output)
+# Bibliothek/en für das Ausgeben der Antwort (Output)
 import gtts
 from playsound import playsound
 
-
-
-
+# Importiere die Completion-Klasse aus der completion.py Datei
+from completition import Completion
 
 # Initialisieren des Recognizer-Objekts
 r = sr.Recognizer()
@@ -27,10 +26,6 @@ r = sr.Recognizer()
 # Funktion zur Berechnung der Ähnlichkeit zwischen zwei Zeichenketten
 def aehnlichkeit(a, b):
     return SequenceMatcher(None, a, b).ratio()
-
-
-
-
 
 # Pfade zu den Datenbankdateien
 QUESTIONS_PATH = "fragen_datenbank.txt"
@@ -52,10 +47,6 @@ def save_question_and_answer_to_database(question, answer):
     with open(QUESTIONS_PATH, "a", encoding="utf-8") as q_file, open(ANSWERS_PATH, "a", encoding="utf-8") as a_file:
         q_file.write(question + "\n")
         a_file.write(answer + "\n")
-
-
-
-
 
 # Funktion zur Umwandlung von Sprache in Text
 class SpeechToText:
@@ -81,13 +72,10 @@ class SpeechToText:
         except sr.RequestError as e:
             print("Fehler bei der Anforderung von Google Speech Recognition service; {0}".format(e))
 
-
-
-
-
 class ProcessInput:
     def __init__(self, text):
         self.text = text
+        self.completion = Completion()
 
     def is_already_answer(self):
         return get_answer_from_database(self.text)
@@ -100,6 +88,12 @@ class ProcessInput:
         try:
             resp = await AsyncClient.create_completion("gpt3", self.text)
             return resp
+        except Exception as e:
+            return ("Error: " + str(e))
+
+    def gpt3_completion(self):
+        try:
+            return self.completion.create(self.text)
         except Exception as e:
             return ("Error: " + str(e))
 
@@ -123,16 +117,12 @@ class ProcessInput:
         if answer is None:
             answer = self.is_already_answer()
             if answer is None:
-                answer = await self.falcon_40b()
+                answer = self.gpt3_completion()
                 self.save_question_and_answer(answer)
         answer = self.apply_personality(answer)
         answer = self.search_emotion(answer)
         answer = self.apply_emotion(answer)
         return answer
-
-
-
-
 
 # Funktion zur Umwandlung von Text in Sprache
 def text_to_speech(answer):
@@ -152,7 +142,6 @@ processor = ProcessInput(text)
 answer = asyncio.run(processor.process())
 print(answer)
 
-
-#Text-To-Speech funktioniert noch nicht
+# Text-To-Speech funktioniert noch nicht
 ## Umwandlung von Text in Sprache
-##text_to_speech(answer)
+## text_to_speech(answer)
